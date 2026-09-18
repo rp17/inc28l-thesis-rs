@@ -1,5 +1,48 @@
 #!/usr/bin/env python3
-"""Increment 28l PINN: CurrentNet + contact-routed Cv gate + VOFF shift + physical R."""
+"""
+INCREMENT 28l: CurrentNet + contact-routed Cv + VOFF shift + physical R
+
+Vacancy polarity according to the thesis by Patrick Kollias:
+    Patrick Kollias, Resistive Switching in Epitaxial SrTiO3 on Silicon,
+    Ph.D. thesis, Texas State University, 2022.
+
+PINN paper:
+    Podorozhny, Theodoropoulou, Tesic,
+    arXiv:2609.02966  https://arxiv.org/abs/2609.02966
+
+TARGET VERIFICATION: Match S04 experimental Log I(V)
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+Reference ASCII (S04N First Dataset):
+                  S04N First Dataset - Log I(V) (Logarithmic Scale)
+     ┌─────────────────────────────────────────────────────────────────────────┐
+ 1.39┤ ++ Trace (+)   **********++++++                  +++++++****************│
+     │ ** Retrace (*)          **    ++                ++   ****               │
+     │                          *     +               +    **                  │
+ 0.68┤                           *    ++             ++    *                   │
+     │                           *     +            ++    *                    │
+     │                            *    +           ++    **                    │
+-0.03┤                            *     +          +     *                     │
+     │                            **    +         ++    **                     │
+-0.74┤                             *    +        ++     *                      │
+     │                             **    +      ++     **                      │
+     │                              *    ++++++++      *                       │
+-1.45┤                              **   ++            *                       │
+     │                               **************   **                       │
+     │                                   +        *****                        │
+-2.16┤                                   +           **                        │
+     │                                                *                        │
+-2.87┤                                                *                        │
+     └┬─────────────────┬─────────────────┬─────────────────┬─────────────────┬┘
+    -5.0              -2.5               0.0               2.5              5.0
+
+Key features to verify:
+    1. ONE downward spike (minimum) near V ≈ 0
+    2. Flat, high current (~10^+1 A) at negative V
+    3. Trace (+) rises FIRST at lower positive V (~0.5)
+    4. Retrace (*) rises LATER at higher positive V (~1.5)
+    5. Hysteresis gap visible between V = 0 and V = 2.5
+    6. ~4 orders of magnitude dynamic range
+"""
 
 from __future__ import annotations
 
