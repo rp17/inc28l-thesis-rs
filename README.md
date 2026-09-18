@@ -15,7 +15,7 @@ In Phase 3 the PINN is trained on the experimental dataset of I-V (current on vo
 ## Paper
 
 This PINN follows the cascaded architecture and S04 / Sample-4 CAFM
-protocol in:
+(conductive atomic force microscopy) experiment design in:
 
 > Rodion Podorozhny, Nikoleta Theodoropoulou, Jelena Tešić,
 > *Physics-Informed Neural Network Surrogate for Oxygen Vacancy Dynamics
@@ -78,7 +78,7 @@ python train_28l.py --phases 3 --init-checkpoint weights/checkpoint_phase3.pt --
 |-------|-----------------|------|
 | 1 (pretraining) | each cascade subnet in turn: `phi_net`, `cv_net` (2a base, then 2b hysteresis), `carrier_net`, `current_net` | analytical φ, \(C_v\), \(n,p\), diode-like I |
 | 2 | PDE residual (`phi_net` and `cv_net` hysteresis frozen) | log-Poisson (ρ includes holes), vacancy drift-diffusion, BCs |
-| 3 | all parameters, PCGrad on trace vs retrace | S04 I–V + smoothness; SOAP if `soap.py` imports |
+| 3 | all parameters, PCGrad (for gradient deconfliction) on trace vs retrace | S04 I–V + smoothness |
 
 Hysteresis terms use \(C_v\) at the Si/STO junction (thesis LRS).
 
