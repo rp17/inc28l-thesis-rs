@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Score increment 28l on each S04 2 nA sweep separately (no combined file)."""
+"""Score the Memristor PINN on each S04 2 nA sweep separately (no combined file)."""
 
 from __future__ import annotations
 
@@ -55,7 +55,7 @@ def plot_one(iv, title: str, path: Path) -> None:
 
 
 def main() -> None:
-    p = argparse.ArgumentParser(description="Run increment 28l on S04 sweeps separately.")
+    p = argparse.ArgumentParser(description="Run the Memristor PINN on S04 sweeps separately.")
     p.add_argument("--sweep", choices=("first", "second", "both"), default="both")
     p.add_argument("--out", type=Path, default=HERE / "output")
     args = p.parse_args()
@@ -72,7 +72,7 @@ def main() -> None:
         data = load_s04(fname, device)
         iv = predict_iv(model, data)
         png = args.out / f"thesis_iv_{tag}.png"
-        plot_one(iv, f"28l R=100 Ω  {tag} only", png)
+        plot_one(iv, f"Memristor PINN R=100 Ω  {tag} only", png)
         feat = {k: float(iv[k]) for k in iv if k.startswith("r2_")}
         feat["n_points"] = int(iv["V_phys"].size)
         report["sweeps"][tag] = {"file": fname, **feat, "overlay": str(png)}

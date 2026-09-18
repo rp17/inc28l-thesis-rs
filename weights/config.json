@@ -10,5 +10,5 @@
   "delta_Ec_eV": 0.35,
   "I_MAX_A": 2e-9,
   "checkpoint": "checkpoint_phase3.pt",
-  "parent": "increment_26 SOAP Phase-3, hidden_dim=192"
+  "parent": "paper PINN SOAP Phase-3, hidden_dim=192"
 }

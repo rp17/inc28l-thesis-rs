@@ -1,11 +1,14 @@
-# Increment 28l — thesis resistive-switching PINN on S04
+# Memristor PINN
 
-Inference-only release of **increment 28l**: the increment-26 `CurrentNet`
-(6-layer residual GELU) with vacancy polarity according to the thesis by
-Patrick Kollias (Kollias, *Resistive Switching in Epitaxial SrTiO₃ on
-Silicon*, Ph.D. thesis, Texas State University, 2022), two-contact Cv
-routing, a VOFF argument shift, and a physical series resistance read
-in ohms.
+**Memristor PINN** is the paper four-subnet PINN: `CurrentNet` (6-layer
+residual GELU) with vacancy polarity according to the thesis by Patrick
+Kollias (Kollias, *Resistive Switching in Epitaxial SrTiO₃ on Silicon*,
+Ph.D. thesis, Texas State University, 2022), two-contact Cv routing, a
+VOFF argument shift, and a physical series resistance read in ohms.
+
+Training is the paper three-phase schedule (Phase 1 per-subnet
+pretrain, Phase 2 log-Poisson PDE, Phase 3 SOAP+PCGrad I–V). A shipped
+Phase-3 checkpoint is enough for inference.
 
 Each S04 conductive-AFM sweep is scored **separately**. There is no
 combined +V retrace.
@@ -24,19 +27,19 @@ protocol in:
 
 ## Architecture
 
-The paper PINN is four cascaded GELU subnets, `hidden_dim = 192`. Increment
-26 trains all four. **28l current uses two of them** (`cv_net`,
-`current_net`); `phi_net` and `carrier_net` stay in the Phase-3 file but
-are not constructed and are not called for I.
+The paper PINN is four cascaded GELU subnets, `hidden_dim = 192`.
+`pinn28l.Inc28lPINN` constructs all four. **Current uses** `cv_net` and
+`current_net` only. `phi_net` / `carrier_net` run in `forward()` for
+Phases 1–2. I must not call `phi_net`.
 
-| Subnet | Inputs | Purpose | Size | Parameters |
-|--------|--------|---------|------|------------|
-| `cv_net` | `(x, t, V, b)` | Oxygen-vacancy field \(C_v(x)\). Two residual MLPs (`base_net` 4-layer on `(t,V)`, `hyst_net` 4-layer on `(x,V,b)`). | 4+4 layers × 192 | 302,019 |
-| `phi_net` | `(x, t, V, C_v)` | Electrostatic potential (STO 5-layer residual 192, Si 4-layer 96). | not used for I | 245,379 |
-| `carrier_net` | `(x, t, V, φ, C_v)` | Electrons / holes in log space (two 4-layer MLPs). | not used for I | 150,916 |
-| `current_net` | `(t, V_net, b)` | CAFM I–V shape. 6-layer residual GELU. | 6 layers × 192 | 300,869 |
-| **Full increment-26 PINN** | | Four subnets in `checkpoint_phase3.pt` | | **999,183** |
-| **Live 28l I** | | `cv_net` + `current_net` only | | **602,888** |
+| Subnet | Class | Inputs | Purpose | Size | Parameters |
+|--------|-------|--------|---------|------|------------|
+| `cv_net` | `ContinuousVacancyNet` | `(x, t, V, b)` | Oxygen-vacancy field \(C_v(x)\). Two residual MLPs (`base_net` 4-layer on `(t,V)`, `hyst_net` 4-layer on `(x,V,b)`). | 4+4 layers × 192 | 302,019 |
+| `phi_net` | `TwoRegionPotentialNet` | `(x, t, V, C_v)` | Electrostatic potential (STO 5-layer residual 192, Si 4-layer 96). | not used for I | 245,379 |
+| `carrier_net` | `DDNetStyleCarrierNet` | `(x, t, V, φ, C_v)` | Electrons / holes in log space (two 4-layer MLPs). | not used for I | 150,916 |
+| `current_net` | `CurrentNet` | `(t, V_net, b)` | CAFM I–V shape. 6-layer residual GELU. | 6 layers × 192 | 300,869 |
+| **Full PINN** | `Inc28lPINN` | Four subnets in `checkpoint_phase3.pt` | | **999,183** |
+| **I graph** | | `cv_net` + `current_net` | | **602,888** |
 
 Live current (normalized), with `w = sigmoid(20 V)`:
 
@@ -50,21 +53,35 @@ If `R > 0`, one Picard update uses the ohmic drop
 
 | Symbol | Value | Role |
 |--------|-------|------|
-| `net` | Phase-3 increment-26 weights, frozen | CAFM shape |
+| `net` | Phase-3 weights, frozen | CAFM shape |
 | `α_si` | 0.514 | Si/CBO vacancy drive on +V |
-| `α_pt` | 0.0289 | Pt identity (increment-26 scale) |
+| `α_pt` | 0.0289 | Pt identity on −V |
 | `γ` | 0.20 V | VOFF left-shift on +V |
-| `R` | 100 Ω | S0 series resistance; 0.2 μV at 2 nA |
+| `R` | 100 Ω | series resistance; 0.2 μV at 2 nA |
 | `n` | 1 | ideality left at identity |
 | `ΔE_c` | 0.35 eV | paper Anderson offset; not added to `V_net` (κ = 0) |
 
-## Weights (`weights/checkpoint_phase3.pt`)
+## Training
 
-Yes — 28l **uses** this file. `load_model()` reads the increment-26 SOAP
-Phase-3 state dict and copies `cv_net` and `current_net` into the live
-model. Without it there are no trained I–V weights, only empty GELU
-layers. `phi_net` and `carrier_net` tensors in the same file are ignored
-(I must not call `phi_net`; increment 27p).
+```bash
+# full Phase 1 + 2 + 3 (defaults 2000 / 5000 / 4000 epochs)
+python train_28l.py --phases 1,2,3 --sweep first --out output/checkpoint_trained.pt
+
+# short smoke
+python train_28l.py --phases 1 --epochs-p1 2
+
+# continue from the shipped Phase-3 weights
+python train_28l.py --phases 3 --init-checkpoint weights/checkpoint_phase3.pt --epochs-p3 200
+```
+
+| Phase | What is trained | Loss |
+|-------|-----------------|------|
+| 1 | each subnet in turn | analytical φ, \(C_v\), \(n,p\), diode-like I |
+| 2 | PDE (`phi` frozen after this phase) | log-Poisson (ρ includes holes), vacancy drift-diffusion, BCs |
+| 3 | all parameters, PCGrad on trace vs retrace | S04 I–V + smoothness; SOAP if `soap.py` imports |
+
+Hysteresis terms use \(C_v\) at the Si/STO junction (thesis LRS), not at
+`x = 0`. Optimizer: SOAP (`soap.py`, arXiv:2409.11321) with Adam fallback.
 
 ## Install
 
