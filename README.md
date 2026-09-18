@@ -143,9 +143,9 @@ Outputs are saved in `output/`:
 - `thesis_iv_first.png`, `thesis_iv_second.png`
 - `increment28l_perfile.json`
 
-## Expected R^2scores
+## Expected $R^2$ scores
 
-| Sweep | R² trace / retrace | +V retrace |
+| Sweep | $R^2$ trace / retrace | +V retrace |
 |-------|--------------------|------------|
 | first | 0.995 / 0.969 | 0.878 |
 | second | 0.975 / 0.941 | 0.738 |
