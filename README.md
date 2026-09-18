@@ -1,17 +1,15 @@
 # Memristor PINN
 
-**Memristor PINN** is the paper four-subnet PINN: `CurrentNet` (6-layer
-residual GELU) with vacancy polarity according to the thesis by Patrick
+**Memristor PINN** constructs the paper cascade of four GELU subnets
+(`cv_net`, `phi_net`, `carrier_net`, `current_net`; 999,183 parameters)
+with vacancy polarity according to the thesis by Patrick
 Kollias (Kollias, *Resistive Switching in Epitaxial SrTiO₃ on Silicon*,
 Ph.D. thesis, Texas State University, 2022), two-contact Cv routing, a
 VOFF argument shift, and a physical series resistance read in ohms.
 
-Training is the paper three-phase schedule (Phase 1 per-subnet
-pretrain, Phase 2 log-Poisson PDE, Phase 3 SOAP+PCGrad I–V). A shipped
-Phase-3 checkpoint is enough for inference.
-
-Each S04 conductive-AFM sweep is scored **separately**. There is no
-combined +V retrace.
+Training is done in 3 phases. Pretraining has three stages: Stage 1
+analytical fit of all four subnets, Stage 2 log-Poisson PDE residual,
+Stage 3 SOAP+PCGrad I–V. Phase-3 checkpoint is enough for inference.
 
 ## Paper
 
@@ -27,19 +25,24 @@ protocol in:
 
 ## Architecture
 
-The paper PINN is four cascaded GELU subnets, `hidden_dim = 192`.
-`pinn28l.Inc28lPINN` constructs all four. **Current uses** `cv_net` and
-`current_net` only. `phi_net` / `carrier_net` run in `forward()` for
-Phases 1–2. I must not call `phi_net`.
+`Inc28lPINN` is the paper four-stage cascade, `hidden_dim = 192`. All
+four subnets are constructed, loaded from `checkpoint_phase3.pt`, and
+run in `forward()`:
 
-| Subnet | Class | Inputs | Purpose | Size | Parameters |
-|--------|-------|--------|---------|------|------------|
-| `cv_net` | `ContinuousVacancyNet` | `(x, t, V, b)` | Oxygen-vacancy field \(C_v(x)\). Two residual MLPs (`base_net` 4-layer on `(t,V)`, `hyst_net` 4-layer on `(x,V,b)`). | 4+4 layers × 192 | 302,019 |
-| `phi_net` | `TwoRegionPotentialNet` | `(x, t, V, C_v)` | Electrostatic potential (STO 5-layer residual 192, Si 4-layer 96). | not used for I | 245,379 |
-| `carrier_net` | `DDNetStyleCarrierNet` | `(x, t, V, φ, C_v)` | Electrons / holes in log space (two 4-layer MLPs). | not used for I | 150,916 |
-| `current_net` | `CurrentNet` | `(t, V_net, b)` | CAFM I–V shape. 6-layer residual GELU. | 6 layers × 192 | 300,869 |
-| **Full PINN** | `Inc28lPINN` | Four subnets in `checkpoint_phase3.pt` | | **999,183** |
-| **I graph** | | `cv_net` + `current_net` | | **602,888** |
+```
+C_v = cv_net(x, t, V, b)
+    → φ = phi_net(x, t, V, C_v)
+    → (n, p) = carrier_net(x, t, V, φ, C_v)
+    → I = current_net(t, V, b, C_v)
+```
+
+| Stage | Subnet | Class | Inner nets | Inputs | Purpose | Parameters |
+|-------|--------|-------|------------|--------|---------|------------|
+| 1 | `cv_net` | `ContinuousVacancyNet` | `base_net` 4-layer residual 192 on `(t,V)`; `hyst_net` 4-layer residual 192 on `(x,V,b)`; `δ_Cv` | `(x, t, V, b)` | Oxygen-vacancy field \(C_v(x)\) | 302,019 |
+| 2 | `phi_net` | `TwoRegionPotentialNet` | `sto_net` 5-layer residual 192; `si_net` 4-layer 96; sharpness \(s\) | `(x, t, V, C_v)` | Electrostatic potential \(\varphi(x)\) | 245,379 |
+| 3 | `carrier_net` | `DDNetStyleCarrierNet` | `log_n_net`, `log_p_net` (4-layer 192) | `(x, t, V, φ, C_v)` | Electrons / holes in log space | 150,916 |
+| 4 | `current_net` | `CurrentNet` | 6-layer residual GELU `net`; \(R\), \(n_{\mathrm{tr}}\), \(n_{\mathrm{re}}\), \(\beta\) | `(t, V, b, C_v)` | Terminal current \(I\) | 300,869 |
+| | **PINN** | `Inc28lPINN` | Stages 1–4 | | | **999,183** |
 
 Live current (normalized), with `w = sigmoid(20 V)`:
 
@@ -74,10 +77,10 @@ python train_28l.py --phases 1 --epochs-p1 2
 python train_28l.py --phases 3 --init-checkpoint weights/checkpoint_phase3.pt --epochs-p3 200
 ```
 
-| Phase | What is trained | Loss |
-|-------|-----------------|------|
-| 1 | each subnet in turn | analytical φ, \(C_v\), \(n,p\), diode-like I |
-| 2 | PDE (`phi` frozen after this phase) | log-Poisson (ρ includes holes), vacancy drift-diffusion, BCs |
+| Stage | What is pretrained | Loss |
+|-------|-------------------|------|
+| 1 | all four subnets in turn (\(\varphi_{\mathrm{net}}\), \(cv_{\mathrm{net}}\), \(carrier_{\mathrm{net}}\), \(current_{\mathrm{net}}\)); \(cv_{\mathrm{net}}\) is 2a (base) then 2b (hysteresis) | analytical φ, \(C_v\), \(n,p\), diode-like I |
+| 2 | PDE residual (`phi_net` frozen) | log-Poisson (ρ includes holes), vacancy drift-diffusion, BCs |
 | 3 | all parameters, PCGrad on trace vs retrace | S04 I–V + smoothness; SOAP if `soap.py` imports |
 
 Hysteresis terms use \(C_v\) at the Si/STO junction (thesis LRS), not at
@@ -140,16 +143,12 @@ Outputs are saved in `output/`:
 - `thesis_iv_first.png`, `thesis_iv_second.png`
 - `increment28l_perfile.json`
 
-## Expected scores (this snapshot)
+## Expected R^2scores
 
 | Sweep | R² trace / retrace | +V retrace |
 |-------|--------------------|------------|
 | first | 0.995 / 0.969 | 0.878 |
 | second | 0.975 / 0.941 | 0.738 |
-
-The second-sweep +V retrace stays off until ~3 V in the experiment;
-the model still turns on at the first-sweep voltage. That is
-sweep-to-sweep scatter, not a combined-score artifact.
 
 ## Citation
 
