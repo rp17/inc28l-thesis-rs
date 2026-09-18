@@ -26,10 +26,6 @@ protocol in:
 
 ## Architecture
 
-`Inc28lPINN` is the paper four-stage cascade, `hidden_dim = 192`. All
-four subnets are constructed, loaded from `checkpoint_phase3.pt`, and
-run in `forward()`:
-
 ```
 C_v = cv_net(x, t, V, b)
     → φ = phi_net(x, t, V, C_v)
@@ -84,8 +80,7 @@ python train_28l.py --phases 3 --init-checkpoint weights/checkpoint_phase3.pt --
 | 2 | PDE residual (`phi_net` and `cv_net` hysteresis frozen) | log-Poisson (ρ includes holes), vacancy drift-diffusion, BCs |
 | 3 | all parameters, PCGrad on trace vs retrace | S04 I–V + smoothness; SOAP if `soap.py` imports |
 
-Hysteresis terms use \(C_v\) at the Si/STO junction (thesis LRS), not at
-`x = 0`. Optimizer: SOAP (`soap.py`, arXiv:2409.11321) with Adam fallback.
+Hysteresis terms use \(C_v\) at the Si/STO junction (thesis LRS).
 
 ## Install
 
@@ -95,11 +90,9 @@ source .venv/bin/activate
 pip install -r requirements.txt
 ```
 
-PyTorch CPU is enough. A GPU is used automatically if available.
-
 ## Dataset
 
-`data/` holds the two S04 2 nA linear sweeps used in the paper
+`data/` holds the two S04 2 nA linear sweeps
 (thesis Figure 37 / Sample 4, sensitivity 160):
 
 | File | Sweep |
