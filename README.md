@@ -75,7 +75,7 @@ python train_28l.py --phases 1 --epochs-p1 2
 python train_28l.py --phases 3 --init-checkpoint weights/checkpoint_phase3.pt --epochs-p3 200
 ```
 
-| Phase | What is trained | Loss |
+| Phase | Subnets trained | Loss |
 |-------|-----------------|------|
 | 1 (pretraining) | each cascade subnet in turn: `phi_net`, `cv_net` (2a base, then 2b hysteresis), `carrier_net`, `current_net` | analytical $\varphi$, $C_v$, $n,p$, diode-like $I$ |
 | 2 | PDE residual (`phi_net` and `cv_net` hysteresis frozen) | log-Poisson (ρ includes holes), vacancy drift-diffusion, BCs |
