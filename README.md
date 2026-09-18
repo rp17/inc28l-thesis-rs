@@ -1,15 +1,16 @@
 # Memristor PINN
 
-**Memristor PINN** constructs the paper cascade of four GELU subnets
+**Memristor PINN** has the cascade architecture of four subnets with
+GELU activations (for second-order optimizer evaluation)
 (`cv_net`, `phi_net`, `carrier_net`, `current_net`; 999,183 parameters)
 with vacancy polarity according to the thesis by Patrick
 Kollias (Kollias, *Resistive Switching in Epitaxial SrTiO₃ on Silicon*,
 Ph.D. thesis, Texas State University, 2022), two-contact Cv routing, a
 VOFF argument shift, and a physical series resistance read in ohms.
 
-Training is done in 3 phases. Pretraining has three stages: Stage 1
-analytical fit of all four subnets, Stage 2 log-Poisson PDE residual,
-Stage 3 SOAP+PCGrad I–V. Phase-3 checkpoint is enough for inference.
+Training is done in 3 phases. Phase 1 does analytical pretraining of
+the four cascade subnets. In Phase 2 the PINN is trained on the PDE loss (log-Poisson PDE residual).
+In Phase 3 the PINN is trained on the experimental dataset of I-V (current on voltage) dependence.
 
 ## Paper
 
@@ -77,10 +78,10 @@ python train_28l.py --phases 1 --epochs-p1 2
 python train_28l.py --phases 3 --init-checkpoint weights/checkpoint_phase3.pt --epochs-p3 200
 ```
 
-| Stage | What is pretrained | Loss |
-|-------|-------------------|------|
-| 1 | all four subnets in turn (\(\varphi_{\mathrm{net}}\), \(cv_{\mathrm{net}}\), \(carrier_{\mathrm{net}}\), \(current_{\mathrm{net}}\)); \(cv_{\mathrm{net}}\) is 2a (base) then 2b (hysteresis) | analytical φ, \(C_v\), \(n,p\), diode-like I |
-| 2 | PDE residual (`phi_net` frozen) | log-Poisson (ρ includes holes), vacancy drift-diffusion, BCs |
+| Phase | What is trained | Loss |
+|-------|-----------------|------|
+| 1 (pretraining) | each cascade subnet in turn: `phi_net`, `cv_net` (2a base, then 2b hysteresis), `carrier_net`, `current_net` | analytical φ, \(C_v\), \(n,p\), diode-like I |
+| 2 | PDE residual (`phi_net` and `cv_net` hysteresis frozen) | log-Poisson (ρ includes holes), vacancy drift-diffusion, BCs |
 | 3 | all parameters, PCGrad on trace vs retrace | S04 I–V + smoothness; SOAP if `soap.py` imports |
 
 Hysteresis terms use \(C_v\) at the Si/STO junction (thesis LRS), not at
