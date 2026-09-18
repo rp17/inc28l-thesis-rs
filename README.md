@@ -35,10 +35,10 @@ C_v = cv_net(x, t, V, b)
 
 | Stage | Subnet | Class | Inner nets | Inputs | Purpose | Parameters |
 |-------|--------|-------|------------|--------|---------|------------|
-| 1 | `cv_net` | `ContinuousVacancyNet` | `base_net` 4-layer residual 192 on `(t,V)`; `hyst_net` 4-layer residual 192 on `(x,V,b)`; `δ_Cv` | `(x, t, V, b)` | Oxygen-vacancy field \(C_v(x)\) | 302,019 |
-| 2 | `phi_net` | `TwoRegionPotentialNet` | `sto_net` 5-layer residual 192; `si_net` 4-layer 96; sharpness \(s\) | `(x, t, V, C_v)` | Electrostatic potential \(\varphi(x)\) | 245,379 |
+| 1 | `cv_net` | `ContinuousVacancyNet` | `base_net` 4-layer residual 192 on `(t,V)`; `hyst_net` 4-layer residual 192 on `(x,V,b)`; $\delta_{C_v}$ | `(x, t, V, b)` | Oxygen-vacancy field $C_v(x)$ | 302,019 |
+| 2 | `phi_net` | `TwoRegionPotentialNet` | `sto_net` 5-layer residual 192; `si_net` 4-layer 96; sharpness $s$ | `(x, t, V, C_v)` | Electrostatic potential $\varphi(x)$ | 245,379 |
 | 3 | `carrier_net` | `DDNetStyleCarrierNet` | `log_n_net`, `log_p_net` (4-layer 192) | `(x, t, V, φ, C_v)` | Electrons / holes in log space | 150,916 |
-| 4 | `current_net` | `CurrentNet` | 6-layer residual GELU `net`; \(R\), \(n_{\mathrm{tr}}\), \(n_{\mathrm{re}}\), \(\beta\) | `(t, V, b, C_v)` | Terminal current \(I\) | 300,869 |
+| 4 | `current_net` | `CurrentNet` | 6-layer residual GELU `net`; $R$, $n_{\mathrm{tr}}$, $n_{\mathrm{re}}$, $\beta$ | `(t, V, b, C_v)` | Terminal current $I$ | 300,869 |
 | | **PINN** | `Inc28lPINN` | Stages 1–4 | | | **999,183** |
 
 Live current (normalized), with `w = sigmoid(20 V)`:
@@ -59,7 +59,7 @@ If `R > 0`, one Picard update uses the ohmic drop
 | `γ` | 0.20 V | VOFF left-shift on +V |
 | `R` | 100 Ω | series resistance; 0.2 μV at 2 nA |
 | `n` | 1 | ideality left at identity |
-| `ΔE_c` | 0.35 eV | paper Anderson offset; not added to `V_net` (κ = 0) |
+| $\Delta E_c$ | 0.35 eV | Anderson Si/STO conduction-band offset inside $\phi_{net}$ |
 
 ## Training
 
@@ -76,11 +76,11 @@ python train_28l.py --phases 3 --init-checkpoint weights/checkpoint_phase3.pt --
 
 | Phase | What is trained | Loss |
 |-------|-----------------|------|
-| 1 (pretraining) | each cascade subnet in turn: `phi_net`, `cv_net` (2a base, then 2b hysteresis), `carrier_net`, `current_net` | analytical φ, \(C_v\), \(n,p\), diode-like I |
+| 1 (pretraining) | each cascade subnet in turn: `phi_net`, `cv_net` (2a base, then 2b hysteresis), `carrier_net`, `current_net` | analytical $\varphi$, $C_v$, $n,p$, diode-like $I$ |
 | 2 | PDE residual (`phi_net` and `cv_net` hysteresis frozen) | log-Poisson (ρ includes holes), vacancy drift-diffusion, BCs |
 | 3 | all parameters, PCGrad (for gradient deconfliction) on trace vs retrace | S04 I–V + smoothness |
 
-Hysteresis terms use \(C_v\) at the Si/STO junction (thesis LRS).
+Hysteresis terms use $C_v$ at the Si/STO junction (thesis LRS).
 
 ## Install
 
