@@ -5,7 +5,9 @@ GELU activations (for second-order optimizer evaluation)
 (`cv_net`, `phi_net`, `carrier_net`, `current_net`; 999,183 parameters)
 with vacancy polarity according to the thesis by Patrick
 Kollias (Kollias, *Resistive Switching in Epitaxial SrTiO₃ on Silicon*,
-Ph.D. thesis, Texas State University, 2022), two-contact Cv routing, a
+Ph.D. thesis, Texas State University, 2022) and the Journal of Applied
+Physics article on oxygen-vacancy-driven resistive switching in
+SrTiO₃/Si(001) (Kollias et al., 2025), two-contact Cv routing, a
 VOFF argument shift, and a physical series resistance.
 
 Training is done in 3 phases. Phase 1 does pretraining on the known
@@ -163,5 +165,19 @@ Outputs are saved in `output/`:
   author={Kollias, Patrick},
   year={2022},
   school={Texas State University}
+}
+
+@article{kollias2025oxygen,
+  title={Oxygen vacancy driven resistive switching in {SrTiO$_3$}/{Si}(001)
+         heterostructures due to an electronic mechanism},
+  author={Kollias, Patrick and Cottier, Ryan J. and Miracle, John T.
+          and Cantrell, Samuel R. and Theodoropoulou, Nikoleta},
+  journal={Journal of Applied Physics},
+  volume={137},
+  number={24},
+  pages={244502},
+  year={2025},
+  doi={10.1063/5.0268554},
+  url={https://pubs.aip.org/aip/jap/article/137/24/244502/3351065}
 }
 ```
