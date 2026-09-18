@@ -6,10 +6,11 @@ GELU activations (for second-order optimizer evaluation)
 with vacancy polarity according to the thesis by Patrick
 Kollias (Kollias, *Resistive Switching in Epitaxial SrTiO₃ on Silicon*,
 Ph.D. thesis, Texas State University, 2022), two-contact Cv routing, a
-VOFF argument shift, and a physical series resistance read in ohms.
+VOFF argument shift, and a physical series resistance.
 
-Training is done in 3 phases. Phase 1 does analytical pretraining of
-the four cascade subnets. In Phase 2 the PINN is trained on the PDE loss (log-Poisson PDE residual).
+Training is done in 3 phases. Phase 1 does pretraining on the known
+analytical functions of the four cascade subnets to initialize the
+weights. In Phase 2 the PINN is trained on the PDE loss (log-Poisson PDE residual).
 In Phase 3 the PINN is trained on the experimental dataset of I-V (current on voltage) dependence.
 
 ## Paper
