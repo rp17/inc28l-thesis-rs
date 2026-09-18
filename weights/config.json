@@ -1,0 +1,14 @@
+{
+  "hidden_dim": 192,
+  "alpha_si": 0.51392275,
+  "alpha_pt": 0.0289,
+  "gamma_V": 0.20,
+  "R_ohm": 100.0,
+  "n_trace": 1.0,
+  "n_retrace": 1.0,
+  "kappa": 0.0,
+  "delta_Ec_eV": 0.35,
+  "I_MAX_A": 2e-9,
+  "checkpoint": "checkpoint_phase3.pt",
+  "parent": "increment_26 SOAP Phase-3, hidden_dim=192"
+}
